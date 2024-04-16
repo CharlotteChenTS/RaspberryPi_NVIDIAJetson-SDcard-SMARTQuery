@@ -82,7 +82,7 @@ int show_CID_info(int nargs, char **argv);
 int process_cid(char *dir, CIDInfo *cid_info);//Get cid info
 int CMD56_data_in(int fd, int argCmd56, char *block_data_buff);
 void dump_smart_data(char *block_data_buff);
-void is_transcend_card(char *block_data_buff, char function);
+int is_transcend_card(char *block_data_buff, char function);
 void parsing_SMART_info(char *block_data_buff);
 void parsing_Health_info(char *block_data_buff);
 char *grabString(char* data, int start_pos, int length);

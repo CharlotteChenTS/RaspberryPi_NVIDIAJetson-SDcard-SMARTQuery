@@ -3619,7 +3619,7 @@ void dump_smart_data(char *block_data_buff)
 	return;
 }
 
-void is_transcend_card(char *block_data_buff, char function)
+int is_transcend_card(char *block_data_buff, char function)
 {
 	if(block_data_buff[0] == 84 && block_data_buff[1] == 114 && block_data_buff[2] == 97 && block_data_buff[3] == 110 && block_data_buff[4] == 115 
 		&& block_data_buff[5] == 99 && block_data_buff[6] == 101 && block_data_buff[7] == 110 && block_data_buff[8] == 100)//TRANSCEND
@@ -3640,13 +3640,15 @@ void is_transcend_card(char *block_data_buff, char function)
 		else
 		{
 			printf("Not Support.\n");
+			return 1;
 		}
 	}
 	else
 	{
 		printf("Not Support.\n");
+		return 1;
 	}
-	return;
+	return 0;
 }
 
 int is_transcend_reader(char *device)

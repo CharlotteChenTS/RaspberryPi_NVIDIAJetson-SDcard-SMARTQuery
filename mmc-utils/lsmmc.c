@@ -2301,22 +2301,39 @@ int process_cid(char *dir, CIDInfo *cid_info)
 	int ret = 0;
 	struct config *config = malloc(sizeof(*config));
 
-	if(strstr(dir, "/sys"))
-	{	
-		if (chdir(dir) < 0) {
-			fprintf(stderr,
-				"MMC/SD information directory '%s' does not exist.\n",dir);
-			return -1;
-		}
+	int argCmd56 = 0x110005F9;
+	char data_buff[SD_SMT_BLOCK_SIZE] = {0};
+	int fd;
 
-		type = read_file("type");
-		if (!type) {
-			fprintf(stderr,
-				"Could not read card interface type in directory '%s'.\n",dir);
-			return -1;
-		}
+	fd = open(dir, O_RDWR);
+	if (fd < 0) {
+		perror("open");
+		exit(1);
+	}
+	
+	if(strstr(dir,"mmc"))
+	{
+		type = "SD";
 
-		cid = read_file("cid");
+		char *cid_stream;
+		char cid_hex[32];
+		ret = CMD56_data_in(fd, argCmd56 , data_buff);
+		if (ret) {
+			fprintf(stderr, "CMD56 function fail, %s\n", dir);
+			exit(1);
+		}
+		
+		if(is_transcend_card(data_buff, -1) == 1) /* Only support microSDXC430T and microSDXC450I */
+		{
+			exit(1);
+		}
+		cid_stream = grabHex(data_buff, 144, 16);
+		int offset = 0;
+		for(int i=0 ; i<SD_CID_BLOCK_SIZE ; i++)
+		{
+			offset += sprintf(cid_hex+offset, "%x", cid_stream[i]);
+		}
+		cid = cid_hex;
 		if (!cid) {
 			fprintf(stderr,
 				"Could not read card identity in directory '%s'.\n",dir);
@@ -2327,19 +2344,15 @@ int process_cid(char *dir, CIDInfo *cid_info)
 	else
 	{
 		type = "SD";
-		int fd, ret;
+
 		char cid_stream[SD_CID_BLOCK_SIZE];
 		char cid_hex[32];
-		fd = open(dir, O_RDWR);
-		if (fd < 0) {
-			perror("open");
-			exit(1);
-		}
 		ret = SCSI_CMD10(&fd, cid_stream);
 		if (ret) {
-			fprintf(stderr, "CMD56 function fail, %s\n", dir);
+			fprintf(stderr, "SCSI CMD10 function fail, %s\n", dir);
 			exit(1);
 		}
+		
 		int offset = 0;
 		for(int i=1 ; i<SD_CID_BLOCK_SIZE ; i++)
 		{
@@ -2391,7 +2404,7 @@ int process_cid(char *dir, CIDInfo *cid_info)
 	return 1;
 
 err:
-	free(cid);
+	// free(cid);
 	free(type);
 	
 	return ret;
