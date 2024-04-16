@@ -3372,43 +3372,43 @@ int show_df_info(char *device)
 int show_product_id(char *device)
 {
 	int ret = 0;
-	FILE *ptr = NULL;
-	char readbuf[256];
-	char *udevadm_cmd = "udevadm info --query=all --name=";
-	char cmd[50]={0};
-	char dir[150]={0};
-	char sysfs_path[150] = {0};
+	// FILE *ptr = NULL;
+	// char readbuf[256];
+	// char *udevadm_cmd = "udevadm info --query=all --name=";
+	// char cmd[50]={0};
+	// char dir[150]={0};
+	// char sysfs_path[150] = {0};
 	CIDInfo *cid_info = malloc(sizeof(*cid_info));
 
-	if(strstr(device, "sd") != NULL)
-	{
-		strcpy(dir, device);
-	}
-	else
-	{	
-		strcpy(cmd,udevadm_cmd);
-		strcat(cmd,device);
-		if((ptr = popen(cmd, "r")) != NULL)
-		{
-			while(fgets(readbuf,256,ptr) != NULL)
-			{			
-				if(strstr(readbuf, "P: ") != NULL)
-				{
-					int n = strlen("P: ");
-					strncpy(sysfs_path, readbuf+n, strlen(readbuf)-n-1);
-					break;
-				}
-			}
-			pclose(ptr);
-		}
+	// if(strstr(device, "sd") != NULL)
+	// {
+	// 	strcpy(dir, device);
+	// }
+	// else
+	// {	
+	// 	strcpy(cmd,udevadm_cmd);
+	// 	strcat(cmd,device);
+	// 	if((ptr = popen(cmd, "r")) != NULL)
+	// 	{
+	// 		while(fgets(readbuf,256,ptr) != NULL)
+	// 		{			
+	// 			if(strstr(readbuf, "P: ") != NULL)
+	// 			{
+	// 				int n = strlen("P: ");
+	// 				strncpy(sysfs_path, readbuf+n, strlen(readbuf)-n-1);
+	// 				break;
+	// 			}
+	// 		}
+	// 		pclose(ptr);
+	// 	}
 
-		strcpy(dir, "/sys");
-		strcat(dir, sysfs_path);
-		strcat(dir, "/device");
-	}
+	// 	strcpy(dir, "/sys");
+	// 	strcat(dir, sysfs_path);
+	// 	strcat(dir, "/device");
+	// }
 
 
-	if(process_cid(dir, cid_info) != 1)
+	if(process_cid(device, cid_info) != 1)
 	{
 		printf("get cid info fail.\n");
 		ret = 1;
