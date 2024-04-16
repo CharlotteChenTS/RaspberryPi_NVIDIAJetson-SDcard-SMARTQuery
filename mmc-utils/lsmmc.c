@@ -59,23 +59,6 @@
 #define IDS_MAX			256
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-enum bus_type {
-	MMC = 1,
-	SD,
-};
-
-struct config {
-	char *idsfile;
-	char *dir;
-	bool verbose;
-
-	enum bus_type bus;
-	char *type;
-	char *cid;
-	char *csd;
-	char *scr;
-	char *ext_csd;
-};
 
 enum REG_TYPE {
 	CID = 0,
@@ -2295,92 +2278,14 @@ err:
 	return ret;
 }
 
-int process_cid(char *dir, CIDInfo *cid_info)
+void process_cid(char *cid, CIDInfo *cid_info)
 {
-	char *type = NULL, *cid = NULL;
-	int ret = 0;
 	struct config *config = malloc(sizeof(*config));
-
-	int argCmd56 = 0x110005F9;
-	char data_buff[SD_SMT_BLOCK_SIZE] = {0};
-	int fd;
-
-	fd = open(dir, O_RDWR);
-	if (fd < 0) {
-		perror("open");
-		exit(1);
-	}
 	
-	if(strstr(dir,"mmc"))
-	{
-		type = "SD";
-
-		char *cid_stream;
-		char cid_hex[32];
-		ret = CMD56_data_in(fd, argCmd56 , data_buff);
-		if (ret) {
-			fprintf(stderr, "CMD56 function fail, %s\n", dir);
-			exit(1);
-		}
-		
-		if(is_transcend_card(data_buff, -1) == 1) /* Only support microSDXC430T and microSDXC450I */
-		{
-			exit(1);
-		}
-		cid_stream = grabHex(data_buff, 144, 16);
-		int offset = 0;
-		for(int i=0 ; i<SD_CID_BLOCK_SIZE ; i++)
-		{
-			offset += sprintf(cid_hex+offset, "%x", cid_stream[i]);
-		}
-		cid = cid_hex;
-		if (!cid) {
-			fprintf(stderr,
-				"Could not read card identity in directory '%s'.\n",dir);
-			ret = -1;
-			goto err;
-		}
-	}
-	else
-	{
-		type = "SD";
-
-		char cid_stream[SD_CID_BLOCK_SIZE];
-		char cid_hex[32];
-		ret = SCSI_CMD10(&fd, cid_stream);
-		if (ret) {
-			fprintf(stderr, "SCSI CMD10 function fail, %s\n", dir);
-			exit(1);
-		}
-		
-		int offset = 0;
-		for(int i=1 ; i<SD_CID_BLOCK_SIZE ; i++)
-		{
-			offset += sprintf(cid_hex+offset, "%x", cid_stream[i]);
-		}
-		cid = cid_hex;
-		if (!cid) {
-			fprintf(stderr,
-				"Could not read card identity in directory '%s'.\n",dir);
-			ret = -1;
-			goto err;
-		}
-	}
-	
-	if (strcmp(type, "MMC") && strcmp(type, "SD")) {
-		fprintf(stderr, "Unknown type: '%s'\n", type);
-		ret = -1;
-		goto err;
-	}
-	else{
-		cid_info->type = type;
-	}
-
-	if(strcmp(type, "SD")==0)
+	if(strcmp(cid_info->type, "SD")==0)
 		config->bus = SD;
 	else
 		config->bus = MMC;
-	
 
 	if(config->bus == SD)
 	{
@@ -2401,13 +2306,6 @@ int process_cid(char *dir, CIDInfo *cid_info)
 		cid_info->manufacturer = get_manufacturer(config, cid_info->mid);
 		cid_info->pnm[6] = '\0';
 	}
-	return 1;
-
-err:
-	// free(cid);
-	free(type);
-	
-	return ret;
 }
 
 static int do_read_reg(int argc, char **argv, enum REG_TYPE reg)

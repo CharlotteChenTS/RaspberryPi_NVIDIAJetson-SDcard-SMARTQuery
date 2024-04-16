@@ -69,6 +69,26 @@ typedef struct cid_info {
 	char *type;
 }CIDInfo;
 
+
+enum bus_type {
+	MMC = 1,
+	SD,
+};
+
+struct config {
+	char *idsfile;
+	char *dir;
+	_Bool verbose;
+
+	enum bus_type bus;
+	char *type;
+	char *cid;
+	char *csd;
+	char *scr;
+	char *ext_csd;
+};
+
+
 /* SD SMART */
 int do_SMART_buffer_dump(int nargs, char **argv); //Show SMART raw buffer
 int show_SMART_info(int nargs, char **argv); //Show SMART info
@@ -79,7 +99,8 @@ int is_transcend_reader(char *device);
 int SCSI_CMD56(int *fd, char *block_data_buff);
 int SCSI_CMD10(int *fd, char *block_data_buff);
 int show_CID_info(int nargs, char **argv);
-int process_cid(char *dir, CIDInfo *cid_info);//Get cid info
+int getCIDdata(char *dir, CIDInfo *cid_info);
+void process_cid(char *cid, CIDInfo *cid_info);//Get cid info
 int CMD56_data_in(int fd, int argCmd56, char *block_data_buff);
 void dump_smart_data(char *block_data_buff);
 int is_transcend_card(char *block_data_buff, char function);

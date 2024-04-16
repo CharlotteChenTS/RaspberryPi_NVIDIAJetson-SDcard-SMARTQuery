@@ -3330,7 +3330,7 @@ int show_SMART_info(int nargs, char **argv) /* Show SMART info (ex: Speed class/
 	}
 
 	show_df_info(device);
-	show_product_id(device);
+	show_product_id(data_buff);
 	
 	is_transcend_card(data_buff, TYPE_SMART); /* Only support microSDXC430T and microSDXC450I */
 	return ret;
@@ -3369,55 +3369,34 @@ int show_df_info(char *device)
 	return ret;
 }
 
-int show_product_id(char *device)
+int show_product_id(char *data_buff)
 {
 	int ret = 0;
-	// FILE *ptr = NULL;
-	// char readbuf[256];
-	// char *udevadm_cmd = "udevadm info --query=all --name=";
-	// char cmd[50]={0};
-	// char dir[150]={0};
-	// char sysfs_path[150] = {0};
+	char *cid;
+	char *cid_stream = NULL;
+	char cid_hex[32];
 	CIDInfo *cid_info = malloc(sizeof(*cid_info));
+	cid_info->type = "SD";
 
-	// if(strstr(device, "sd") != NULL)
-	// {
-	// 	strcpy(dir, device);
-	// }
-	// else
-	// {	
-	// 	strcpy(cmd,udevadm_cmd);
-	// 	strcat(cmd,device);
-	// 	if((ptr = popen(cmd, "r")) != NULL)
-	// 	{
-	// 		while(fgets(readbuf,256,ptr) != NULL)
-	// 		{			
-	// 			if(strstr(readbuf, "P: ") != NULL)
-	// 			{
-	// 				int n = strlen("P: ");
-	// 				strncpy(sysfs_path, readbuf+n, strlen(readbuf)-n-1);
-	// 				break;
-	// 			}
-	// 		}
-	// 		pclose(ptr);
-	// 	}
-
-	// 	strcpy(dir, "/sys");
-	// 	strcat(dir, sysfs_path);
-	// 	strcat(dir, "/device");
-	// }
-
-
-	if(process_cid(device, cid_info) != 1)
+	if(is_transcend_card(data_buff, -1) == 1) /* Only support microSDXC430T and microSDXC450I */
 	{
-		printf("get cid info fail.\n");
-		ret = 1;
+		exit(1);
 	}
-	else
+	cid_stream = grabHex(data_buff, 144, 16);
+	int offset = 0;
+	for(int i=0 ; i<SD_CID_BLOCK_SIZE ; i++)
 	{
-		printf("product: '%s' %d.%d\n", cid_info->pnm, cid_info->prv_major, cid_info->prv_minor);
-		ret = 0;
+		offset += sprintf(cid_hex+offset, "%02x", cid_stream[i]);
 	}
+	cid = cid_hex;
+	if (!cid) {
+		fprintf(stderr,
+			"Could not read card identity.\n");
+		ret = -1;
+	}
+	process_cid(cid, cid_info);
+	printf("product: '%s' %d.%d\n", cid_info->pnm, cid_info->prv_major, cid_info->prv_minor);
+	ret = 0;
 
 	return ret;
 }
@@ -3437,11 +3416,7 @@ int show_CID_info(int nargs, char **argv)
 
 	device = argv[nargs-1];
 
-	if(process_cid(device, cid_info) != 1)
-	{
-		printf("get cid info fail.\n");
-		exit(1);
-	}
+	getCIDdata(device, cid_info);
 	printf("type:\t\t\t%s",cid_info->type);
 
 	char value[64];
@@ -3600,6 +3575,89 @@ int SCSI_CMD10(int *fd, char *block_data_buff)
     {
         ret = 0;
     }
+
+	return ret;
+}
+
+int getCIDdata(char *dir, CIDInfo *cid_info)
+{
+
+	char *type = NULL, *cid = NULL;
+	int ret = 0;
+
+	int argCmd56 = 0x110005F9;
+	char data_buff[SD_SMT_BLOCK_SIZE] = {0};
+	int fd;
+
+	fd = open(dir, O_RDWR);
+	if (fd < 0) {
+		perror("open");
+		exit(1);
+	}
+	
+	if(strstr(dir,"mmc"))
+	{
+		type = "SD";
+
+		char *cid_stream;
+		char cid_hex[32];
+		ret = CMD56_data_in(fd, argCmd56 , data_buff);
+		if (ret) {
+			fprintf(stderr, "CMD56 function fail, %s\n", dir);
+			exit(1);
+		}
+		
+		if(is_transcend_card(data_buff, -1) == 1) /* Only support microSDXC430T and microSDXC450I */
+		{
+			exit(1);
+		}
+		cid_stream = grabHex(data_buff, 144, 16);
+		int offset = 0;
+		for(int i=0 ; i<SD_CID_BLOCK_SIZE ; i++)
+		{
+			offset += sprintf(cid_hex+offset, "%x", cid_stream[i]);
+		}
+		cid = cid_hex;
+		if (!cid) {
+			fprintf(stderr,
+				"Could not read card identity in directory '%s'.\n",dir);
+			ret = -1;
+		}
+	}
+	else
+	{
+		type = "SD";
+
+		char cid_stream[SD_CID_BLOCK_SIZE];
+		char cid_hex[32];
+		ret = SCSI_CMD10(&fd, cid_stream);
+		if (ret) {
+			fprintf(stderr, "SCSI CMD10 function fail, %s\n", dir);
+			exit(1);
+		}
+		
+		int offset = 0;
+		for(int i=1 ; i<SD_CID_BLOCK_SIZE ; i++)
+		{
+			offset += sprintf(cid_hex+offset, "%x", cid_stream[i]);
+		}
+		cid = cid_hex;
+		if (!cid) {
+			fprintf(stderr,
+				"Could not read card identity in directory '%s'.\n",dir);
+			ret = -1;
+		}
+	}
+	
+	if (strcmp(type, "MMC") && strcmp(type, "SD")) {
+		fprintf(stderr, "Unknown type: '%s'\n", type);
+		ret = -1;
+	}
+	else{
+		cid_info->type = type;
+	}
+	
+	process_cid(cid, cid_info);
 
 	return ret;
 }
