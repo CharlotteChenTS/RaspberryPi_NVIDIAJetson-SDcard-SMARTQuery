@@ -6,7 +6,8 @@ The various statuses of microSD products are located in the SMART block of the d
 By reading and analyzing the SMART block, you can get the product name, serial number, firmware version, Erase count, health, etc. of the device, so as to monitor and find the 
 device early potential problems. This document provides a way to use the MMC test tools called mmc-utils that get SMART block to enable SMART command via the native microSD slot on Raspberry PiRaspberry Pi / NVIDIA Jetson Nano. 
 
-**Note : The project works for Transcend Embedded microSD / SD products.**
+**Note 1: The project works for Transcend Embedded microSD / SD products.**
+**Note 2: This project supports Transcend RDF5 card reader.**
 
 Hardware requirements
 -------------------------
@@ -75,10 +76,16 @@ Usage
  sudo ./mmc health /dev/mmcblk0
 ```
  
-8. Get CID information by following command.
+8.1 Get MMC CID information by following command.
    
 ```
  sudo ./mmc cidinfo /sys/block/mmcblk0/device
+``` 
+
+8.2 Get SDCard+RDF5 reader CID information by following command.
+   
+```
+ sudo ./mmc scsicid /dev/sdX
 ``` 
 
 Command Execution
@@ -92,9 +99,11 @@ Command Execution
 3. To show card life(Heath)</br></br>
 ![Heath](health.png)
 
-4. To show CID info</br></br>
+4. To show MMC CID info</br></br>
 ![CIDInfo](cidinfo.png)
 
+5. To show SDCard+RDF5 reader CID info</br></br>
+![SCSICID](sdsicid.png)
 
 Note: For other SMART Data Structure, please refer to Transcend Embedded microSD / SD datasheet.</br>
 ![sdsmart](sdsmart.PNG)
