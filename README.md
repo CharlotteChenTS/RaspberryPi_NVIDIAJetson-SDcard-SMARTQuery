@@ -7,6 +7,7 @@ By reading and analyzing the SMART block, you can get the product name, serial n
 device early potential problems. This document provides a way to use the MMC test tools called mmc-utils that get SMART block to enable SMART command via the native microSD slot on Raspberry PiRaspberry Pi / NVIDIA Jetson Nano. 
 
 **Note 1: The project works for Transcend Embedded microSD / SD products.**
+
 **Note 2: This project supports Transcend RDF5 card reader.**
 
 Hardware requirements
